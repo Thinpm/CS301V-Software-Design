@@ -76,12 +76,28 @@
    npm install
    ```
 
-3. Khởi động ứng dụng:
+3. Cấu hình kết nối API (nếu cần):
+   
+   Mở file `src/api/api.js` và kiểm tra/sửa đổi URL kết nối API:
+   ```javascript
+   // Thay đổi baseURL nếu backend của bạn chạy ở địa chỉ khác
+   const API = axios.create({
+     baseURL: 'http://localhost:5000', 
+     timeout: 30000,
+     // ...
+   });
+   ```
+
+4. Khởi động ứng dụng:
    ```bash
    npm run dev
    ```
 
-4. Mở trình duyệt và truy cập: `http://localhost:5173`
+5. Mở trình duyệt và truy cập: `http://localhost:8080/`
+
+
+   
+
 
 ## Đóng góp
 
