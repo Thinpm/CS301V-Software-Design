@@ -48,8 +48,26 @@ class UserDAO(UserDAOInterface):
             cursor.execute("SELECT * FROM user WHERE username = %s", (username,))
             user_data = cursor.fetchone()
             
-            logger.info(f"User created successfully: {username}")
-            return User.from_dict(user_data)
+            if not user_data:
+                logger.error(f"User created but could not be retrieved: {username}")
+                return None
+                
+            user = User.from_dict(user_data)
+            
+            # Generate JWT token for new user
+            token = jwt.encode({
+                'user_id': user.id,
+                'exp': datetime.utcnow() + timedelta(days=self.token_expiry_days)
+            }, self.secret_key, algorithm='HS256')
+            
+            # Store token
+            if self.store_token(user.id, token):
+                user.token = token
+                logger.info(f"User created successfully with token: {username}")
+                return user
+                
+            logger.warning(f"User created but token could not be stored: {username}")
+            return user
         except Error as e:
             logger.error(f"Database error while creating user {username}: {e}")
             conn.rollback()
@@ -97,8 +115,45 @@ class UserDAO(UserDAOInterface):
         finally:
             cursor.close()
 
-    def verify_user_credentials(self, username: str, password: str) -> Optional[User]:
-        """Verify user credentials and generate JWT token"""
+    def verify_user_credentials(self, email: str, password: str) -> Optional[User]:
+        """Verify user credentials using email and generate JWT token"""
+        try:
+            conn = self.connection.get_connection()
+            cursor = conn.cursor(dictionary=True)
+            
+            try:
+                cursor.execute("SELECT * FROM user WHERE email = %s", (email,))
+                user_data = cursor.fetchone()
+                
+                if not user_data:
+                    logger.warning(f"Login attempt failed: User not found with email - {email}")
+                    return None
+                
+                user = User.from_dict(user_data)
+                
+                if bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
+                    # Generate JWT token with expiration
+                    token = jwt.encode({
+                        'user_id': user.id,
+                        'exp': datetime.utcnow() + timedelta(days=self.token_expiry_days)
+                    }, self.secret_key, algorithm='HS256')
+                    
+                    # Store token
+                    if self.store_token(user.id, token):
+                        user.token = token
+                        logger.info(f"User logged in successfully with email: {email}")
+                        return user
+                    
+                logger.warning(f"Login attempt failed: Invalid password for email - {email}")
+                return None
+            finally:
+                cursor.close()
+        except Exception as e:
+            logger.error(f"Error during user verification for email {email}: {e}")
+            raise
+            
+    def verify_user_by_username(self, username: str, password: str) -> Optional[User]:
+        """Verify user credentials using username and generate JWT token"""
         try:
             user = self.get_user_by_username(username)
             if not user:
@@ -115,7 +170,7 @@ class UserDAO(UserDAOInterface):
                 # Store token
                 if self.store_token(user.id, token):
                     user.token = token
-                    logger.info(f"User logged in successfully: {username}")
+                    logger.info(f"User logged in successfully with username: {username}")
                     return user
                 
             logger.warning(f"Login attempt failed: Invalid password for user - {username}")

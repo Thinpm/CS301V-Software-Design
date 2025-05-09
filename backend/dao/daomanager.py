@@ -28,8 +28,12 @@ class DAOManager:
         return self.user_dao.create_user(username, password, email)
 
     def login_user(self, username: str, password: str):
-        """Login user and return user object with token"""
+        """Login user using email and return user object with token"""
         return self.user_dao.verify_user_credentials(username, password)
+        
+    def login_user_by_username(self, username: str, password: str):
+        """Login user using username and return user object with token"""
+        return self.user_dao.verify_user_by_username(username, password)
 
     def logout_user(self, user_id: int):
         """Logout user by clearing their token"""
