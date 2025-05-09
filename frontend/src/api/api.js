@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create axios instance with base URL
 const API = axios.create({
-  baseURL: 'http://192.168.1.19:5000', // Điều chỉnh URL để trùng với địa chỉ IP máy chủ
+  baseURL: 'http://localhost:5000', // Sửa lại thành localhost để dễ triển khai
   timeout: 30000, // Tăng timeout lên 30 giây
   headers: {
     'Content-Type': 'application/json',
