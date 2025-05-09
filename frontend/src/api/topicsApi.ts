@@ -14,6 +14,7 @@ export interface VocabularyWord {
 }
 
 export interface QuizQuestion {
+  id?: number;
   question: string;
   option1: string;
   option2: string;

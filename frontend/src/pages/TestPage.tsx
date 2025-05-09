@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { getTopic, getTopicQuizQuestions } from "../api/topicsApi";
+import { getTopic, getTopicQuizQuestions, submitQuizResults } from "../api/topicsApi";
 import { useProgress } from "../context/ProgressContext";
 import QuizQuestion from "../components/QuizQuestion";
 import { Button } from "@/components/ui/button";
@@ -68,11 +68,33 @@ const TestPage = () => {
 
   const completeTest = () => {
     const finalScore = (score / totalQuestions) * 100;
-    const passed = finalScore >= 70;
+    const passed = finalScore >= 80;
     
     // Update progress context
     if (topicId) {
       updateTopicProgress(topicId, passed, finalScore);
+      
+      // Lưu kết quả bài kiểm tra vào cơ sở dữ liệu
+      if (questions && questions.length > 0) {
+        try {
+          // Có thể sử dụng topic_id thay vì question id
+          submitQuizResults({
+            test_id: parseInt(topicId), // Sử dụng topicId thay vì question id
+            score: finalScore
+          }).then(response => {
+            console.log("Kết quả kiểm tra đã được lưu:", response);
+          }).catch(error => {
+            console.error("Lỗi khi lưu kết quả kiểm tra:", error);
+            toast({
+              title: "Lỗi lưu kết quả",
+              description: "Kết quả bài kiểm tra đã được lưu cục bộ nhưng không thể đồng bộ với server",
+              variant: "destructive"
+            });
+          });
+        } catch (error) {
+          console.error("Lỗi khi chuẩn bị dữ liệu để lưu kết quả:", error);
+        }
+      }
     }
     
     setTestCompleted(true);
@@ -82,7 +104,7 @@ const TestPage = () => {
       title: passed ? "Chúc mừng!" : "Chưa đạt yêu cầu",
       description: passed 
         ? `Bạn đã hoàn thành bài kiểm tra với điểm số ${Math.round(finalScore)}%` 
-        : `Bạn cần đạt ít nhất 70% để vượt qua bài kiểm tra`,
+        : `Bạn cần đạt ít nhất 80% để vượt qua bài kiểm tra`,
       variant: passed ? "default" : "destructive",
     });
   };
@@ -158,13 +180,13 @@ const TestPage = () => {
           </p>
           
           <div className={`p-3 mb-8 rounded-md ${
-            score / totalQuestions >= 0.7
+            score / totalQuestions >= 0.88
               ? "bg-green-100 text-green-700"
               : "bg-yellow-100 text-yellow-700"
           }`}>
-            {score / totalQuestions >= 0.7
+            {score / totalQuestions >= 0.8
               ? "Chúc mừng! Bạn đã hoàn thành chủ đề này."
-              : "Bạn cần đạt ít nhất 70% để vượt qua bài kiểm tra."}
+              : "Bạn cần đạt ít nhất 80% để vượt qua bài kiểm tra."}
           </div>
           
           <div className="flex gap-4 flex-col sm:flex-row justify-center">
@@ -179,7 +201,7 @@ const TestPage = () => {
             
             <Button
               onClick={() => navigate(`/learn/${topicId}`)}
-              variant={score / totalQuestions >= 0.7 ? "outline" : "default"}
+              variant={score / totalQuestions >= 0.8 ? "outline" : "default"}
             >
               Quay lại học
             </Button>
